@@ -1,19 +1,16 @@
 import ctypes
 import dataclasses
-import distutils.spawn
 import os.path
 import re
 import shlex
 import signal
 import subprocess
 import tkinter as tk
-import tkinter.ttk as ttk
 import tkinter.filedialog
+import tkinter.ttk as ttk
 import winreg
-from copy import deepcopy
 
 import jsons
-
 import psutil as psutil
 
 from scrframe import ScrollableFrame
@@ -121,7 +118,8 @@ class ProcessModel:
             self.process.kill()
 
     def run(self):
-        if (executable := get_program_for_file(self.path)) is None:
+        executable = get_program_for_file(self.path)
+        if executable is None:
             executable = [self.path]
         process = subprocess.Popen(
             executable,
@@ -175,13 +173,60 @@ class Model:
         self._config_storage.save()
 
 
+class AppView(ttk.Frame):
+    def __init__(self, parent, app: ProcessModel,
+                 toggle_callback, delete_callback):
+        super().__init__(parent)
+        self.app_name = tk.StringVar()
+        self.app_state = tk.StringVar()
+        self.app = None
+        ttk.Label(master=self, textvariable=self.app_name, width=20).pack(side=tk.LEFT, padx=8)
+        ttk.Label(master=self, textvariable=self.app_state,width=12).pack(side=tk.LEFT, padx=8)
+        self.live_controller_btn = ttk.Button(
+            master=self, command=lambda: toggle_callback(self.app)
+        )
+        self.live_controller_btn.pack(side=tk.LEFT, padx=4, pady=8)
+        ttk.Button(
+            master=self, text="Delete",
+            command=lambda: delete_callback(self.app.path)
+        ).pack(side=tk.LEFT, padx=4, pady=8)
+        self.open_folder_btn = ttk.Button(
+            master=self, text="Open folder",
+            command=lambda: self.open_app_path(self.app.path)
+        )
+        self.open_folder_btn.pack(side=tk.LEFT, padx=4, pady=8)
+        self.set_app(app)
+
+    def set_app(self, app: ProcessModel):
+        self.app = app
+        self.app_name.set(os.path.basename(app.path).strip())
+        self.app_state.set(self.get_state(app))
+        exists_state = tk.DISABLED if not self.app.is_exists else tk.NORMAL
+        self.live_controller_btn.config(state=exists_state, text="Kill" if app.is_alive else "Run")
+        self.open_folder_btn.config(state=exists_state)
+
+    def refresh(self):
+        self.set_app(self.app)
+
+    @staticmethod
+    def get_state(app: ProcessModel):
+        if not app.is_exists:
+            return "NOT FOUND"
+        if app.is_alive:
+            return "ACTIVE"
+        return "NOT ACTIVE"
+
+    def open_app_path(self, path):
+        os.system(f'explorer /select,"{os.path.normpath(path)}"')
+
+
 class View(ttk.Frame):
     def __init__(self, parent):
         super().__init__(parent)
         self.controller: 'Controller' = None
         self.common_status = ttk.Label(text='...')
         self.common_status.pack(padx=8, pady=8)
-        self.apps = ScrollableFrame(self, width=540)
+        self.apps = ScrollableFrame(self, width=580)
         self.apps.pack(padx=8, pady=8)
         bulk_controls = ttk.Frame(self)
         bulk_controls.pack()
@@ -202,41 +247,36 @@ class View(ttk.Frame):
                         variable=self.run_at_startup, command=lambda: self.controller.set_run_at_startup(bool(self.run_at_startup.get()))).pack(anchor="w")
         ttk.Checkbutton(master=bottom_bar, text="Kill all apps when program closed",
                         variable=self.kill_on_close, command=lambda: self.controller.set_kill_on_close(bool(self.kill_on_close.get()))).pack(anchor="w")
+        self._apps_stored = []
+        self._apps_views = []
+        self.refresh()
+
+    def refresh(self):
+        self.refresh_apps()
+        self.after(1000, self.refresh)
 
     def set_settings(self, settings: Config):
         self.run_at_startup.set(settings.run_all_at_startup)
         self.kill_on_close.set(settings.kill_all_on_close)
 
     def set_apps(self, apps: list[ProcessModel]):
+        self._apps_stored = apps
+        self._apps_views = []
         for child in self.apps.winfo_children():
             child.destroy()
-        for i, app in enumerate(apps):
-            ttk.Label(master=self.apps, text=self.format_app_name(app.path)).grid(column=0, row=i, padx=8)
-            state = ttk.Label(master=self.apps, text=self.get_state(app))
-            state.grid(column=1, row=i, padx=16)
-            state.after(1000, lambda state=state, app=app: state.config(text=self.get_state(app)))
-            if app.is_exists:
-                ttk.Button(
-                    master=self.apps, text="Kill" if app.is_alive else "Run",
-                    command=lambda app=app: self.toggle_app_callback(app)
-                ).grid(column=2, row=i, padx=4, pady=8)
-            ttk.Button(
-                master=self.apps, text="Delete",
-                command=lambda app=app.path: self.delete_app_callback(app)
-            ).grid(column=3, row=i, padx=4, pady=8)
-            ttk.Button(
-                master=self.apps, text="Open folder",
-                command=lambda path=app.path: self.open_app_path(path)
-            ).grid(column=4, row=i, padx=4, pady=8)
-        self.common_status.config(text=f"Common status: {self.get_common_state(apps)}")
+        for app in apps:
+            app_view = AppView(self.apps, app, self.toggle_app_callback, self.delete_app_callback)
+            self._apps_views.append(app_view)
+            app_view.pack()
+        self.refresh_common_state()
 
-    @staticmethod
-    def get_state(app: ProcessModel):
-        if not app.is_exists:
-            return "NOT FOUND"
-        if app.is_alive:
-            return "ACTIVE"
-        return "NOT ACTIVE"
+    def refresh_apps(self):
+        for app_view in self._apps_views:
+            app_view.refresh()
+        self.refresh_common_state()
+
+    def refresh_common_state(self):
+        self.common_status.config(text=f"Common status: {self.get_common_state(self._apps_stored)}")
 
     @staticmethod
     def get_common_state(apps: list[ProcessModel]):
@@ -248,15 +288,6 @@ class View(ttk.Frame):
         if not any(alive_states):
             return "ALL INACTIVE"
         return f"PARTIAL ACTIVE ({alive_states.count(True)}/{len(alive_states)})"
-
-    @staticmethod
-    def format_app_name(app_path):
-        app_name = os.path.basename(app_path)
-        app_name = app_name.strip()
-        max_len = 30
-        if len(app_name) > max_len:
-            app_name = app_name[:max_len] + '…'
-        return app_name
 
     def add_apps_callback(self):
         self.controller.add_apps(self.get_apps_paths())
@@ -275,9 +306,6 @@ class View(ttk.Frame):
 
     def delete_all_apps_callback(self):
         self.controller.delete_all_apps()
-
-    def open_app_path(self, path):
-        os.system(f'explorer /select,"{os.path.normpath(path)}"')
 
 
 class Controller:
@@ -315,12 +343,12 @@ class Controller:
 
     def toggle_app(self, app: ProcessModel):
         app.toggle()
-        self.view.set_apps(self.model.processes)
+        self.view.refresh_apps()
 
     def set_all_apps_alive(self, is_alive: bool):
         for app in self.model.processes:
             app.is_alive = is_alive
-        self.view.set_apps(self.model.processes)
+        self.view.refresh_apps()
 
     def set_run_at_startup(self, value: bool):
         self.model.settings.run_all_at_startup = value
