@@ -3,15 +3,12 @@ import dataclasses
 import os.path
 import re
 import shlex
-import signal
-import subprocess
 import tkinter as tk
 import tkinter.filedialog
 import tkinter.ttk as ttk
 import winreg
-
+from WinJobster import Process
 import jsons
-import psutil as psutil
 
 from scrframe import ScrollableFrame
 
@@ -68,15 +65,6 @@ class ConfigStorage:
             file.write(jsons.dumps(self.config,  jdkwargs=dict(indent=2)))
 
 
-def find_process(name, path, pid):
-    for proc in psutil.process_iter():
-        try:
-            if proc.name() == name or proc.exe() == path or proc.pid == pid:
-                return proc
-        except:
-            return None
-
-
 def get_program_for_file(filename):
     extension = os.path.splitext(filename)[1]
     try:
@@ -91,7 +79,7 @@ def get_program_for_file(filename):
                              .replace("%l", os.path.normpath(filename))\
                              .replace("%L", os.path.normpath(filename))
         args = [arg for arg in args if not re.search(r'(?<!%)%(\*|[2-9])', arg)]
-        return args
+        return ' '.join(args)
     except:
         return None
 
@@ -99,7 +87,7 @@ def get_program_for_file(filename):
 class ProcessModel:
     def __init__(self, path: str):
         self.path = path
-        self.process = None
+        self.process: Process = None
 
     @property
     def is_exists(self):
@@ -109,26 +97,16 @@ class ProcessModel:
     def is_alive(self):
         if not self.process:
             return False
-        return self.process.is_running()
+        return self.process.is_alive
 
     def kill(self):
         if self.process:
-            self.process.send_signal(signal.CTRL_BREAK_EVENT)
-            self.process.terminate()
             self.process.kill()
 
     def run(self):
-        executable = get_program_for_file(self.path)
-        if executable is None:
-            executable = [self.path]
-        process = subprocess.Popen(
-            executable,
-            creationflags=subprocess.CREATE_NEW_PROCESS_GROUP,
-            start_new_session=True,
-            cwd=os.path.dirname(self.path)
-        )
-        process.is_running = lambda: process.poll() is None
-        self.process = process
+        executable = get_program_for_file(self.path) or self.path
+        self.process = Process()
+        self.process.start(executable, os.path.dirname(self.path))
 
     @is_alive.setter
     def is_alive(self, value):
