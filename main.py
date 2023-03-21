@@ -3,10 +3,12 @@ import dataclasses
 import os.path
 import re
 import shlex
+import sys
 import tkinter as tk
 import tkinter.filedialog
 import tkinter.ttk as ttk
 import winreg
+import argparse
 from WinJobster import Process
 import jsons
 
@@ -20,6 +22,7 @@ class PathsStorage:
 
     def load(self):
         try:
+            mkdir(self.filename)
             with open(self.filename, 'r', encoding='utf-8-sig') as file:
                 self._paths = {path.strip() for path in file.readlines() if path}
         except OSError:
@@ -46,6 +49,13 @@ class PathsStorage:
 class Config:
     run_all_at_startup: bool = False
     kill_all_on_close: bool = False
+    rules_path: str = 'apps_to_manage.txt'
+
+
+def mkdir(path):
+    dirname = os.path.dirname(path)
+    if dirname and not (os.path.exists(dirname) and os.path.isdir(dirname)):
+        os.mkdir(dirname)
 
 
 class ConfigStorage:
@@ -55,6 +65,7 @@ class ConfigStorage:
 
     def load(self):
         try:
+            mkdir(self.filename)
             with open(self.filename, 'r', encoding='utf-8-sig') as file:
                 self.config = jsons.loads(file.read(), Config)
         except OSError:
@@ -125,10 +136,10 @@ class ProcessModel:
 
 
 class Model:
-    def __init__(self):
-        self._paths_storage = PathsStorage()
-        self._config_storage = ConfigStorage()
+    def __init__(self, args):
+        self._config_storage = ConfigStorage(args.config)
         self._config_storage.load()
+        self._paths_storage = PathsStorage(self.settings.rules_path)
         self.paths: list = list(self._paths_storage.paths)
         self._processes = {path: ProcessModel(path) for path in self.paths}
 
@@ -338,12 +349,12 @@ class Controller:
 
 
 class App(tk.Tk):
-    def __init__(self):
+    def __init__(self, args):
         super().__init__()
         self.title('Apps bulk start/stop')
         self.geometry('640x480')
         self.apply_theme()
-        model = Model()
+        model = Model(args)
         view = View(self)
         view.pack(fill=tk.X, padx=8, pady=8)
         controller = Controller(model, view)
@@ -358,8 +369,15 @@ class App(tk.Tk):
         style.theme_use('forest-dark')
 
 
+def get_args():
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument('--config', '-c', default='config.json')
+    return parser.parse_args(sys.argv[1:])
+
+
 def main():
-    App().mainloop()
+    args = get_args()
+    App(args).mainloop()
 
 
 if __name__ == '__main__':

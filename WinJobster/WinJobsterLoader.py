@@ -9,7 +9,6 @@ class WinJobsterLoader:
         dll_path = pathlib.Path(__file__).parent
         architecture = 64 if platform.architecture()[0] == '64bit' else 86
         dll_path = str(dll_path.joinpath(f'WinJobster-x{architecture}.dll').absolute())
-        print(dll_path)
         lib = c.WinDLL(dll_path)
         lib.StartProcess.restype = c.c_uint32
         lib.StartProcess.errcheck = WinJobsterLoader._errcheck

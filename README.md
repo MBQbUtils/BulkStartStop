@@ -18,3 +18,11 @@ Features:
 # Download: [![Latest](https://img.shields.io/github/v/tag/MBQbUtils/BulkStartStop?sort=date&label=&style=for-the-badge&color=424242)](https://github.com/MBQbUtils/BulkStartStop/releases/latest/download/BulkStartStop_portable.zip)
 ## Theme used: [forest-dark](https://github.com/rdbende/Forest-ttk-theme) with minor changes
 ## Main lib used: [WinJobster](https://github.com/SemperSolus0x3d/WinJobster) with minor changes
+
+# Multiple configs and rules lists
+Path to config can be configured with `-c`/`--config` params on start
+```cmd
+BulkStartStop.exe --config path/to/config.json
+```
+
+Path to rules list file can be set with config.
