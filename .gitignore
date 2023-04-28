@@ -315,3 +315,5 @@ $RECYCLE.BIN/
 
 # End of https://www.toptal.com/developers/gitignore/api/python,pycharm+all,windows,git,venv
 /logs/Client.txt
+/exe/*
+/setup/BulkStartStop_setup.exe
