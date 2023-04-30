@@ -36,6 +36,7 @@ jobs:
       shell: cmd
 
     - name: Create Release
+      id: create_release
       uses: softprops/action-gh-release@v1
       env:
         GITHUB_TOKEN: ${{ github.token }}
@@ -44,3 +45,23 @@ jobs:
         files: |
           BulkStartStop_portable.zip
           setup/BulkStartStop_setup.exe
+
+    - name: Update package manifest
+      run: |
+        iwr https://aka.ms/wingetcreate/latest -OutFile wingetcreate.exe
+        ./wingetcreate update $Env:NAME -u $Env:URL -v $Env:VERSION -t $Env:TOKEN --submit
+      env:
+        NAME: MaxBQb.BulkStartStop
+        URL: https://github.com/MBQbUtils/BulkStartStop/releases/download/${{ github.ref_name }}/BulkStartStop_setup.exe|x64
+        VERSION: ${{ github.ref_name }}
+        TOKEN: ${{ secrets.TOKEN }}
+
+    - name: Rollback Release
+      if: failure()
+      uses: author/action-rollback@stable
+      with:
+        release_id: ${{ steps.create_release.id }}
+        tag: ${{ github.ref_name }}
+        delete_orphan_tag: true
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
