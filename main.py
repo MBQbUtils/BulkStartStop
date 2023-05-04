@@ -77,6 +77,9 @@ class ConfigStorage:
 
 def get_program_for_file(filename):
     extension = os.path.splitext(filename)[1]
+    app_path = os.path.normpath(filename)
+    if extension in ('.lnk', '.url'):
+        return f'cmd /C "{app_path}"'
     try:
         with winreg.OpenKey(winreg.HKEY_CLASSES_ROOT, extension, 0, winreg.KEY_READ) as key:
             value, _ = winreg.QueryValueEx(key, '')
@@ -85,9 +88,9 @@ def get_program_for_file(filename):
         args = shlex.split(command_line)
         for i, arg in enumerate(args):
             if "%1" in arg or "%l" in arg.lower():
-                args[i] = arg.replace("%1", os.path.normpath(filename))\
-                             .replace("%l", os.path.normpath(filename))\
-                             .replace("%L", os.path.normpath(filename))
+                args[i] = arg.replace("%1", app_path)\
+                             .replace("%l", app_path)\
+                             .replace("%L", app_path)
         args = [arg for arg in args if not re.search(r'(?<!%)%(\*|[2-9])', arg)]
         return ' '.join(args)
     except:
@@ -286,7 +289,7 @@ class View(ttk.Frame):
     def get_apps_paths(self) -> tuple[str]:
         return tk.filedialog.askopenfilenames(
             title='Select some executables',
-            filetypes=(("Executable", ".exe .bat .cmd"), ("Other", "*.*"))
+            filetypes=(("Executable", ".exe .bat .cmd .url .lnk"), ("Other", "*.*"))
         ) or tuple()
 
     def delete_app_callback(self, app):
