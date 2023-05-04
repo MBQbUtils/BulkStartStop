@@ -17,16 +17,16 @@ from scrframe import ScrollableFrame
 
 class PathsStorage:
     def __init__(self, filename: str = 'apps_to_manage.txt'):
-        self._paths = set()
+        self._paths = tuple()
         self.filename = filename
 
     def load(self):
         try:
             mkdir(self.filename)
             with open(self.filename, 'r', encoding='utf-8-sig') as file:
-                self._paths = {path.strip() for path in file.readlines() if path}
+                self._paths = tuple(path.strip() for path in file.readlines() if path)
         except OSError:
-            self._paths = set()
+            self._paths = tuple()
 
     def save(self):
         with open(self.filename, 'w', encoding='utf-8-sig') as file:
@@ -39,10 +39,9 @@ class PathsStorage:
         return self._paths
 
     @paths.setter
-    def paths(self, value: set[str]):
-        if self.paths != value:
-            self._paths = set(value)
-            self.save()
+    def paths(self, value: tuple[str, ...]):
+        self._paths = value
+        self.save()
 
 
 @dataclasses.dataclass
@@ -140,7 +139,7 @@ class Model:
         self._config_storage = ConfigStorage(args.config)
         self._config_storage.load()
         self._paths_storage = PathsStorage(self.settings.rules_path)
-        self.paths: list = list(self._paths_storage.paths)
+        self.paths = list(self._paths_storage.paths)
         self._processes = {path: ProcessModel(path) for path in self.paths}
 
     @property
@@ -155,7 +154,7 @@ class Model:
         return self._config_storage.config
 
     def save(self):
-        self._paths_storage.paths = self.paths  # Save and diffcheck paths
+        self._paths_storage.paths = tuple(self.paths)
         self.paths = list(self._paths_storage.paths)
 
     def save_settings(self):
