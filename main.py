@@ -3,12 +3,15 @@ import dataclasses
 import os.path
 import re
 import shlex
+import subprocess
 import sys
+import textwrap
 import tkinter as tk
 import tkinter.filedialog
 import tkinter.ttk as ttk
 import winreg
 import argparse
+
 from WinJobster import Process
 import jsons
 
@@ -68,7 +71,9 @@ class ConfigStorage:
             with open(self.filename, 'r', encoding='utf-8-sig') as file:
                 self.config = jsons.loads(file.read(), Config)
         except OSError:
-            pass
+            self.save()
+        except jsons.DeserializationError:
+            self.save()
 
     def save(self):
         with open(self.filename, 'w', encoding='utf-8-sig') as file:
@@ -164,6 +169,10 @@ class Model:
         self._config_storage.save()
 
 
+def open_path(path):
+    os.system(f'explorer /select,"{os.path.normpath(path)}"')
+
+
 class AppView(ttk.Frame):
     def __init__(self, parent, app: ProcessModel,
                  toggle_callback, delete_callback):
@@ -183,7 +192,7 @@ class AppView(ttk.Frame):
         ).pack(side=tk.LEFT, padx=4, pady=8)
         self.open_folder_btn = ttk.Button(
             master=self, text="Open folder",
-            command=lambda: self.open_app_path(self.app.path)
+            command=lambda: open_path(self.app.path)
         )
         self.open_folder_btn.pack(side=tk.LEFT, padx=4, pady=8)
         self.set_app(app)
@@ -207,8 +216,23 @@ class AppView(ttk.Frame):
             return "ACTIVE"
         return "NOT ACTIVE"
 
-    def open_app_path(self, path):
-        os.system(f'explorer /select,"{os.path.normpath(path)}"')
+
+def make_shortcut(app_path: str, args: str, shortcut_path: str):
+    workdir = os.path.dirname(app_path)
+    command = textwrap.dedent(f"""
+    Set objWS = WScript.CreateObject("WScript.Shell")
+    Set objLink = objWS.CreateShortcut("{shortcut_path}")
+
+    objLink.TargetPath = "{app_path}"
+    objLink.Arguments = "{args}"
+    objLink.IconLocation = "{app_path}"
+    objLink.WorkingDirectory = "{workdir}"
+    objLink.Save
+    """).strip()
+    with open("make_shortcut.vbs", 'w') as f:
+        f.write(command)
+    os.system("CSCRIPT .\\make_shortcut.vbs")
+    os.remove(".\\make_shortcut.vbs")
 
 
 class View(ttk.Frame):
@@ -238,6 +262,8 @@ class View(ttk.Frame):
                         variable=self.run_at_startup, command=lambda: self.controller.set_run_at_startup(bool(self.run_at_startup.get()))).pack(anchor="w")
         ttk.Checkbutton(master=bottom_bar, text="Kill all apps when program closed",
                         variable=self.kill_on_close, command=lambda: self.controller.set_kill_on_close(bool(self.kill_on_close.get()))).pack(anchor="w")
+        ttk.Button(master=bottom_bar, text="Make new config", command=self.make_new_config_callback)\
+            .pack(anchor="w", pady=8)
         self._apps_stored = []
         self._apps_views = []
         self.refresh()
@@ -291,6 +317,33 @@ class View(ttk.Frame):
             title='Select some executables',
             filetypes=(("Executable", ".exe .bat .cmd .url .lnk"), ("Other", "*.*"))
         ) or tuple()
+
+    def make_new_config_callback(self):
+        new_config = self.get_new_config_path()
+        if not new_config:
+            return
+        new_config = os.path.normpath(new_config)
+        config_dir = os.path.dirname(new_config)
+        app_name = os.path.basename(sys.argv[0]).split(".")[0]
+        config_name = os.path.basename(new_config).split(".")[0]
+        config_storage = ConfigStorage(new_config)
+        config_storage.config.rules_path = os.path.join(config_dir, config_storage.config.rules_path)
+        config_storage.save()
+        link_path = os.path.join(config_dir, f"New {app_name} for {config_name}.lnk")
+        make_shortcut(
+            sys.argv[0],
+            f'-c ""{new_config}""',
+            link_path
+        )
+        open_path(link_path)
+
+    def get_new_config_path(self) -> str:
+        return tk.filedialog.asksaveasfilename(
+            defaultextension="json",
+            initialfile="config",
+            filetypes=(("json", ".json",),),
+            title='Save new config to',
+        ) or None
 
     def delete_app_callback(self, app):
         self.controller.delete_app(app)
@@ -350,11 +403,12 @@ class Controller:
         self.model.save_settings()
 
 
+
 class App(tk.Tk):
     def __init__(self, args):
         super().__init__()
         self.title('Apps bulk start/stop')
-        self.geometry('640x480')
+        self.geometry('640x520')
         self.apply_theme()
         model = Model(args)
         view = View(self)

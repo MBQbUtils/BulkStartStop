@@ -31,3 +31,5 @@ BulkStartStop.exe --config path/to/config.json
 ```
 
 Path to rules list file can be set with config.
+
+Use `Make new config` button for that purpose.
