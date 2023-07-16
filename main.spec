@@ -7,7 +7,6 @@ block_cipher = None
 a = Analysis(
     ['main.py'],
     pathex=['venv\\Lib\\site-packages'],
-    binaries=[('WinJobster/*.dll', 'WinJobster')],
     datas=[('*.tcl', '.'), ('forest-dark', 'forest-dark')],
     hiddenimports=[],
     hookspath=[],

@@ -1,1 +1,2 @@
 jsons==1.6.3
+WinJobster==2.*

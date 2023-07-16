@@ -1,18 +1,17 @@
+import argparse
 import ctypes
 import dataclasses
 import os.path
 import re
 import shlex
-import subprocess
 import sys
 import textwrap
 import tkinter as tk
 import tkinter.filedialog
 import tkinter.ttk as ttk
 import winreg
-import argparse
 
-from WinJobster import Process
+import WinJobster
 import jsons
 
 from scrframe import ScrollableFrame
@@ -105,7 +104,7 @@ def get_program_for_file(filename):
 class ProcessModel:
     def __init__(self, path: str):
         self.path = path
-        self.process: Process = None
+        self.process: WinJobster.Job = None
 
     @property
     def is_exists(self):
@@ -119,12 +118,12 @@ class ProcessModel:
 
     def kill(self):
         if self.process:
-            self.process.kill()
+            self.process.terminate()
 
     def run(self):
         executable = get_program_for_file(self.path) or self.path
-        self.process = Process()
-        self.process.start(executable, os.path.dirname(self.path))
+        self.process = WinJobster.Job()
+        self.process.start_process(executable, working_directory=os.path.dirname(self.path))
 
     @is_alive.setter
     def is_alive(self, value):
