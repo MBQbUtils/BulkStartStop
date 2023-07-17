@@ -8,7 +8,7 @@ a = Analysis(
     ['main.py'],
     pathex=['venv\\Lib\\site-packages'],
     datas=[('data', 'data')],
-    hiddenimports=[],
+    hiddenimports=['platformdirs', 'pkg_resources'],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
