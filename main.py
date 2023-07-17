@@ -83,7 +83,7 @@ def get_program_for_file(filename):
     extension = os.path.splitext(filename)[1]
     app_path = os.path.normpath(filename)
     if extension in ('.lnk', '.url'):
-        return f'cmd /C "{app_path}"'
+        return f'cmd.exe /C start "" "{app_path}"'
     try:
         with winreg.OpenKey(winreg.HKEY_CLASSES_ROOT, extension, 0, winreg.KEY_READ) as key:
             value, _ = winreg.QueryValueEx(key, '')
@@ -418,7 +418,7 @@ class App(tk.Tk):
         self.protocol("WM_DELETE_WINDOW", lambda: controller.on_close(self))
 
     def apply_theme(self):
-        ctypes.windll['uxtheme.dll'][135](1)
+        ctypes.windll['uxtheme.dll'][135](1) # Win Dark Theme hack
         self.tk.call('source', 'forest-dark.tcl')
         style = ttk.Style()
         style.theme_use('forest-dark')
