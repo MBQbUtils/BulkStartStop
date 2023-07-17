@@ -418,8 +418,8 @@ class App(tk.Tk):
         self.protocol("WM_DELETE_WINDOW", lambda: controller.on_close(self))
 
     def apply_theme(self):
-        ctypes.windll['uxtheme.dll'][135](1) # Win Dark Theme hack
-        self.tk.call('source', 'data/theme/forest-dark.tcl')
+        ctypes.windll['uxtheme.dll'][135](1)  # Win Dark Theme hack
+        self.tk.call('source', 'data/theme/forest/forest-dark.tcl')
         style = ttk.Style()
         style.theme_use('forest-dark')
 

@@ -1,0 +1,3 @@
+[submodule "data/theme/forest"]
+	path = data/theme/forest
+	url = https://github.com/MaxBQb/Forest-ttk-theme
