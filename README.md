@@ -21,8 +21,8 @@ Features:
 ```
 winget install BulkStartStop
 ```
-## Theme used: [forest-dark](https://github.com/rdbende/Forest-ttk-theme) with minor changes
-## Main lib used: [WinJobster](https://github.com/SemperSolus0x3d/WinJobster) with minor changes
+## Theme used: [forest-dark](https://github.com/rdbende/Forest-ttk-theme)
+## Main lib used: [WinJobster.py](https://github.com/SemperSolus0x3d/WinJobster.py)
 
 # Multiple configs and rules lists
 Path to config can be configured with `-c`/`--config` params on start
