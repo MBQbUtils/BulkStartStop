@@ -419,7 +419,7 @@ class App(tk.Tk):
 
     def apply_theme(self):
         ctypes.windll['uxtheme.dll'][135](1) # Win Dark Theme hack
-        self.tk.call('source', 'forest-dark.tcl')
+        self.tk.call('source', 'data/theme/forest-dark.tcl')
         style = ttk.Style()
         style.theme_use('forest-dark')
 

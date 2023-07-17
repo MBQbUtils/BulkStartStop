@@ -7,7 +7,7 @@ block_cipher = None
 a = Analysis(
     ['main.py'],
     pathex=['venv\\Lib\\site-packages'],
-    datas=[('*.tcl', '.'), ('forest-dark', 'forest-dark')],
+    datas=[('data', 'data')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
