@@ -1,13 +1,22 @@
 # -*- mode: python ; coding: utf-8 -*-
+import site
+import os.path
 
 
 block_cipher = None
 
+packages_path = site.getsitepackages()[1]
+if os.path.exists('venv'):
+    packages_path = 'venv\\Lib\\site-packages'
 
 a = Analysis(
     ['main.py'],
     pathex=['venv\\Lib\\site-packages'],
     datas=[('data', 'data')],
+    binaries=[
+        (packages_path+"\\libs\\WinJobster-x64.dll", "libs"),
+        (packages_path+"\\libs\\WinJobster-x86.dll", "libs"),
+    ],
     hiddenimports=['platformdirs', 'pkg_resources'],
     hookspath=[],
     hooksconfig={},
