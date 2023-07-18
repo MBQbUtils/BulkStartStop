@@ -1,0 +1,16 @@
+name: "Force close WInget PR's"
+
+# Controls when the action will run. Workflow runs when manually triggered using the UI
+# or API.
+on:
+  schedule:
+    - cron: '5 5 * * 0,2,4'
+  workflow_dispatch:
+
+jobs:
+  greet:
+    runs-on: windows-latest
+    steps:
+    - name: Remove winget-package-fork
+      shell: cmd
+      run: 'curl -sf https://github.com/MaxBQb/winget-pkgs > NULL && curl -L -X DELETE -H "Authorization: Bearer ${{ secrets.DEL_TOKEN }}" -H "X-GitHub-Api-Version: 2022-11-28" https://api.github.com/repos/MaxBQb/winget-pkgs'
